@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     app_name: str = "PayLinkHub"
     app_version: str = "0.1.0"
     api_prefix: str = "/api/v1"
+    core_base_url: str = "https://dummyjson.com/users"
+    pagos_base_url: str = "https://dummyjson.com/carts/user"
 
 
 @lru_cache
