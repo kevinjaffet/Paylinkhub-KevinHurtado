@@ -1,6 +1,6 @@
 Luego de haber creado la estructura de arquitectura del proyecto, paso a utilizar un agente de Cursor para generar el primer requisito con el siguiente prompt: 
 
-"# TAREA 1 — Configuración inicial del backend PayLinkHub
+"Configuración inicial del backend PayLinkHub
 
 Actúa como un desarrollador backend senior especializado en Python y FastAPI.
 
@@ -216,7 +216,40 @@ Comprueba:
 
 Al terminar, informa los archivos modificados y los resultados de las pruebas. No hagas commits ni avances a la siguiente fase.
 
-Respuesta: 
-
-
 ##############################################################################
+
+Contrato canonico: 
+
+Decisiones de diseño
+
+Conservo únicamente los datos necesarios del cliente y sus transacciones, descartando información sensible como contraseñas, números de seguro social y datos bancarios.
+
+También incorporé partial y warnings para informar cuándo algún proveedor falla sin impedir que se entreguen los datos disponibles. Finalmente, providers permite identificar individualmente el estado de cada integración.
+
+propuesta de contrato: 
+{
+  "customer": {
+    "id": 1,
+    "full_name": "Emily Johnson",
+    "email": "emily.johnson@example.com",
+    "phone": "555-123-4567"
+  },
+  "transactions": [
+    {
+      "id": 1,
+      "products": [
+        "Essence Mascara Lash Princess",
+        "Eyeshadow Palette"
+      ],
+      "quantity": 3,
+      "total_usd": 25.98
+    }
+  ],
+  "partial": false,
+  "warnings": [],
+  "providers": {
+    "core": "ok",
+    "pagos": "ok",
+    "fx": "ok"
+  }
+}
