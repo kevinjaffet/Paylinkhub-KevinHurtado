@@ -1,6 +1,7 @@
 from fastapi import FastAPI, status
 
 from app.config import get_settings
+from app.routes.dashboard import router as dashboard_router
 
 settings = get_settings()
 
@@ -9,7 +10,10 @@ app = FastAPI(
     version=settings.app_version,
 )
 
-# Future API routers are registered here under settings.api_prefix.
+app.include_router(
+    dashboard_router,
+    prefix=f"{settings.api_prefix}/dashboard",
+)
 
 
 @app.get("/health", status_code=status.HTTP_200_OK)
