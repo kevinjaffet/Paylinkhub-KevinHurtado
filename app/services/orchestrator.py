@@ -2,7 +2,7 @@ import asyncio
 
 from app.models.dashboard import Dashboard, ProvidersStatus
 from app.services.cache import get_fx_rates
-from app.services.mapper import map_customer, map_transactions
+from app.services.mapper import map_customer, map_exchange_rates, map_transactions
 from app.services.providers import ProviderError, fetch_core, fetch_pagos
 
 
@@ -15,6 +15,7 @@ async def build_dashboard(customer_id: str) -> Dashboard:
     )
 
     warnings: list[str] = []
+    exchange_rates = None
 
     if isinstance(core_result, ProviderError):
         customer = None
@@ -42,7 +43,12 @@ async def build_dashboard(customer_id: str) -> Dashboard:
     elif isinstance(fx_result, Exception):
         raise fx_result
     else:
-        fx_status = "ok"
+        exchange_rates = map_exchange_rates(fx_result)
+        if exchange_rates is None:
+            fx_status = "unavailable"
+            warnings.append("FX is unavailable")
+        else:
+            fx_status = "ok"
 
     return Dashboard(
         customer=customer,
@@ -54,4 +60,5 @@ async def build_dashboard(customer_id: str) -> Dashboard:
             pagos=pagos_status,
             fx=fx_status,
         ),
+        exchange_rates=exchange_rates,
     )

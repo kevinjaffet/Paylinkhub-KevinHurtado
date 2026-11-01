@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PayLinkHub</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">Monitoreo</p>
+      <h1>PayLinkHub</h1>
+    </div>
+  </header>
+
+  <main>
+    <form id="customer-form" class="panel query-panel">
+      <div class="field">
+        <label for="customer-id">ID del cliente</label>
+        <input id="customer-id" name="customerId" type="text" inputmode="numeric" autocomplete="off" required>
+      </div>
+      <button id="load-button" type="submit">Consultar</button>
+      <label class="toggle" for="auto-refresh">
+        <input id="auto-refresh" type="checkbox">
+        <span>Actualizar cada 30 segundos</span>
+      </label>
+    </form>
+
+    <p id="status" class="status" role="status" aria-live="polite">Consulta un cliente para ver el dashboard.</p>
+    <section id="partial-alert" class="panel alert" hidden></section>
+
+    <section id="dashboard" hidden>
+      <section id="providers" class="panel" aria-label="Estado de proveedores"></section>
+      <section id="rates" class="panel" hidden></section>
+      <section id="customer" class="panel"></section>
+      <section id="transactions" class="panel">
+        <div class="section-heading">
+          <h2>Transacciones</h2>
+          <div class="field">
+            <label for="transaction-filter">Buscar</label>
+            <input id="transaction-filter" type="search" placeholder="ID o producto" autocomplete="off">
+          </div>
+        </div>
+        <div id="transaction-rows" class="transaction-list"></div>
+        <p id="no-transactions" class="empty" hidden>No hay transacciones.</p>
+        <p id="empty-results" class="empty" hidden>No hay resultados para la búsqueda.</p>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,7 +1,12 @@
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PlainSerializer
+
+Rate = Annotated[
+    Decimal,
+    PlainSerializer(float, return_type=float, when_used="json"),
+]
 
 ProviderState = Literal["ok", "degraded", "unavailable"]
 
@@ -26,9 +31,16 @@ class ProvidersStatus(BaseModel):
     fx: ProviderState
 
 
+class ExchangeRates(BaseModel):
+    base: str
+    EUR: Rate
+    GBP: Rate
+
+
 class Dashboard(BaseModel):
     customer: Customer | None
     transactions: list[Transaction]
     partial: bool
     warnings: list[str]
     providers: ProvidersStatus
+    exchange_rates: ExchangeRates | None = None

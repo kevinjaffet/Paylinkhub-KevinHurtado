@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from app.models.dashboard import Customer, Transaction
+from app.models.dashboard import Customer, ExchangeRates, Transaction
 
 
 def map_customer(payload: Any) -> Customer | None:
@@ -18,6 +18,23 @@ def map_customer(payload: Any) -> Customer | None:
         email=_text(payload.get("email")),
         phone=_text(payload.get("phone")),
     )
+
+
+def map_exchange_rates(payload: Any) -> ExchangeRates | None:
+    if not isinstance(payload, dict):
+        return None
+
+    base = payload.get("base")
+    rates = payload.get("rates")
+    if not isinstance(base, str) or not base.strip() or not isinstance(rates, dict):
+        return None
+
+    eur = _rate(rates.get("EUR"))
+    gbp = _rate(rates.get("GBP"))
+    if eur is None or gbp is None:
+        return None
+
+    return ExchangeRates(base=base.strip(), EUR=eur, GBP=gbp)
 
 
 def map_transactions(payload: Any) -> list[Transaction]:
@@ -81,6 +98,20 @@ def _as_int(value: Any) -> int:
         if number == number.to_integral_value():
             return int(number)
     return 0
+
+
+def _rate(value: Any) -> Decimal | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if not isinstance(value, (int, float, Decimal, str)):
+        return None
+    try:
+        number = Decimal(str(value).strip())
+    except InvalidOperation:
+        return None
+    if not number.is_finite():
+        return None
+    return number
 
 
 def _as_decimal(value: Any) -> Decimal:

@@ -1,6 +1,6 @@
 # PayLinkHub
 
-PayLinkHub es un servicio de agregación de pagos. Esta versión expone una API REST con un contrato canónico de dashboard y un endpoint de salud. El dashboard responde con datos fijos de prueba.
+PayLinkHub es un servicio de agregación de pagos. Esta versión expone una API REST con un contrato canónico de dashboard y un endpoint de salud.
 
 Proyecto del examen Desarrollo, Integración e Innovación en el Ecosistema de Pagos.
 
@@ -61,7 +61,44 @@ La API queda disponible en `http://127.0.0.1:8000`.
 ## Endpoints actuales
 
 - `GET /health`: indica que el servicio está operativo.
-- `GET /api/v1/dashboard/{customerId}`: devuelve el dashboard canónico del cliente. `customerId` se refleja en el identificador del cliente y el resto de la respuesta usa datos fijos de prueba.
+- `GET /api/v1/dashboard/{customerId}`: devuelve el dashboard canónico del cliente.
+
+## Contrato canónico
+
+Ejemplo de `GET /api/v1/dashboard/{customerId}` cuando CORE, PAGOS y FX responden:
+
+```json
+{
+  "customer": {
+    "id": "1",
+    "full_name": "Emily Johnson",
+    "email": "emily.johnson@x.dummyjson.com",
+    "phone": "+81 965-431-3024"
+  },
+  "transactions": [
+    {
+      "id": "1",
+      "products": ["iPhone 9"],
+      "quantity": 1,
+      "total_usd": "549.00"
+    }
+  ],
+  "partial": false,
+  "warnings": [],
+  "providers": {
+    "core": "ok",
+    "pagos": "ok",
+    "fx": "ok"
+  },
+  "exchange_rates": {
+    "base": "USD",
+    "EUR": 0.92,
+    "GBP": 0.78
+  }
+}
+```
+
+`total_usd` se serializa como texto para conservar los decimales. `EUR` y `GBP` se serializan como números. Si FX falla o su respuesta no trae `base`, `EUR` y `GBP`, `exchange_rates` es `null`, `partial` es `true`, `providers.fx` es `unavailable` y `warnings` incluye `FX is unavailable`.
 
 ## Documentación API
 
