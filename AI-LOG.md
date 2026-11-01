@@ -4,8 +4,6 @@ Luego de haber creado la estructura de arquitectura del proyecto, paso a utiliza
 
 Actúa como un desarrollador backend senior especializado en Python y FastAPI.
 
-Debes implementar exclusivamente la **Fase 1 del roadmap de PayLinkHub: configuración inicial del backend**.
-
 ## 1. Contexto del proyecto
 
 PayLinkHub es un servicio de agregación de pagos que posteriormente integrará proveedores externos (CORE, PAGOS y FX), expondrá un contrato canónico mediante una API REST y ofrecerá un panel web de monitoreo.

@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
     core_base_url: str = "https://dummyjson.com/users"
     pagos_base_url: str = "https://dummyjson.com/carts/user"
+    core_timeout_seconds: float = 10.0
+    pagos_timeout_seconds: float = 10.0
 
 
 @lru_cache
