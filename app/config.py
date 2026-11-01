@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     pagos_base_url: str = "https://dummyjson.com/carts/user"
     core_timeout_seconds: float = 10.0
     pagos_timeout_seconds: float = 10.0
+    fx_url: str = "https://api.frankfurter.dev/v1/latest?base=USD&symbols=EUR,GBP"
+    fx_timeout_seconds: float = 10.0
+    fx_cache_ttl_seconds: float = 60.0
 
 
 @lru_cache

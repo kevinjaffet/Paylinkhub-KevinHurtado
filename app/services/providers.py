@@ -117,3 +117,12 @@ async def fetch_pagos(customer_id: str) -> dict[str, Any]:
         _provider_url(settings.pagos_base_url, customer_id),
         httpx.Timeout(settings.pagos_timeout_seconds),
     )
+
+
+async def fetch_fx() -> dict[str, Any]:
+    settings = get_settings()
+    return await _get_json(
+        "fx",
+        settings.fx_url,
+        httpx.Timeout(settings.fx_timeout_seconds),
+    )

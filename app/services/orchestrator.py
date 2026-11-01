@@ -1,14 +1,16 @@
 import asyncio
 
 from app.models.dashboard import Dashboard, ProvidersStatus
+from app.services.cache import get_fx_rates
 from app.services.mapper import map_customer, map_transactions
 from app.services.providers import ProviderError, fetch_core, fetch_pagos
 
 
 async def build_dashboard(customer_id: str) -> Dashboard:
-    core_result, pagos_result = await asyncio.gather(
+    core_result, pagos_result, fx_result = await asyncio.gather(
         fetch_core(customer_id),
         fetch_pagos(customer_id),
+        get_fx_rates(),
         return_exceptions=True,
     )
 
@@ -34,6 +36,14 @@ async def build_dashboard(customer_id: str) -> Dashboard:
         transactions = map_transactions(pagos_result)
         pagos_status = "ok"
 
+    if isinstance(fx_result, ProviderError):
+        fx_status = "unavailable"
+        warnings.append("FX is unavailable")
+    elif isinstance(fx_result, Exception):
+        raise fx_result
+    else:
+        fx_status = "ok"
+
     return Dashboard(
         customer=customer,
         transactions=transactions,
@@ -42,6 +52,6 @@ async def build_dashboard(customer_id: str) -> Dashboard:
         providers=ProvidersStatus(
             core=core_status,
             pagos=pagos_status,
-            fx="unavailable",
+            fx=fx_status,
         ),
     )
