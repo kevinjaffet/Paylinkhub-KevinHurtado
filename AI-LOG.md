@@ -251,3 +251,321 @@ propuesta de contrato:
     "fx": "ok"
   }
 }
+
+########################################################################
+
+Implementa exclusivamente la Fase 4 de PayLinkHub.
+
+**Objetivo:** conectar el backend con los proveedores externos CORE y PAGOS utilizando HTTPX.
+
+### 1. CORE
+Endpoint:
+`https://dummyjson.com/users/{customerId}`
+
+### 2. PAGOS
+Endpoint:
+`https://dummyjson.com/carts/user/{customerId}`
+
+### 3. Implementación
+
+En `app/services/providers.py`:
+
+- Implementa funciones asíncronas independientes para consultar CORE y PAGOS.
+- Utiliza `httpx.AsyncClient`.
+- Configura un timeout explícito por petición.
+- Comprueba los códigos HTTP y maneja errores de conexión y respuestas inválidas.
+- Devuelve los datos JSON originales de cada proveedor.
+- Mantén las URLs configurables mediante variables de entorno.
+- No expongas datos sensibles en logs.
+
+En `app/config.py` y `.env.example`:
+
+- Añade las variables necesarias para las URLs de CORE y PAGOS.
+- Mantén la configuración centralizada mediante Pydantic Settings.
+
+### Restricciones
+
+- No modifiques el contrato canónico.
+- No modifiques el endpoint ni el frontend.
+- No implementes todavía mapeo, orquestación paralela, reintentos, caché ni circuit breaker.
+- No instales dependencias sin comprobar primero `requirements.txt`.
+- No modifiques archivos fuera de los estrictamente necesarios.
+- No ejecutes comandos Git.
+
+### Validación
+
+- Comprueba que ambas funciones pueden consultar sus respectivos proveedores.
+- Verifica el manejo de errores HTTP y de conexión.
+- Ejecuta las pruebas existentes.
+- Informa los archivos modificados y los resultados obtenidos.
+
+No avances a la siguiente fase.
+
+#########################################################################
+
+Implementa exclusivamente la Fase 5 de PayLinkHub: mapeo de proveedores al contrato canónico.
+
+### 1. Archivo
+Implementa la lógica en `app/services/mapper.py`.
+
+### 2. CORE → Customer
+Transforma los datos de DummyJSON al modelo `Customer`:
+
+- `id`
+- `full_name`: combinar `firstName` y `lastName`.
+- `email`
+- `phone`
+
+Descarta cualquier campo que no forme parte del contrato, especialmente:
+- `password`
+- `ssn`
+- `bank.cardNumber`
+- `crypto.wallet`
+
+### 3. PAGOS → Transaction
+
+Transforma los datos de PAGOS al modelo `Transaction`:
+
+- `id`
+- `products`: nombres de los productos.
+- `quantity`: suma de las cantidades de los productos.
+- `total_usd`: calcular sumando `price * quantity` de cada producto.
+
+No dependas de los agregados calculados por el proveedor. Recalcula los valores a partir de los productos recibidos.
+
+### 4. Requisitos
+
+- Utiliza los modelos Pydantic existentes.
+- Mantén el mapeo independiente de las llamadas HTTP.
+- Maneja estructuras vacías o datos faltantes sin provocar errores inesperados.
+- No devuelvas directamente los JSON originales.
+- No modifiques los proveedores ni el endpoint.
+- No implementes orquestación, reintentos ni caché.
+- No ejecutes comandos Git.
+
+### 5. Validación
+
+- Ejecuta las pruebas existentes.
+- Comprueba que los datos mapeados cumplen los modelos canónicos.
+- Verifica que ningún campo sensible de CORE aparece en el resultado.
+- Informa los archivos modificados y los resultados.
+
+No avances a la siguiente fase.
+
+###########################################################################
+
+
+Implementa exclusivamente la Fase 6 de PayLinkHub.
+
+### 1. Archivo
+Implementa la lógica en `app/services/orchestrator.py`.
+
+### 2. Orquestación
+
+- Ejecuta las consultas CORE y PAGOS en paralelo utilizando `asyncio.gather`.
+- Utiliza las funciones existentes de `providers.py`.
+- Transforma las respuestas mediante las funciones de `mapper.py`.
+- Construye y devuelve el modelo canónico `Dashboard`.
+
+### 3. Integración
+
+Modifica `app/routes/dashboard.py` para que el endpoint:
+
+`GET /api/v1/dashboard/{customerId}`
+
+utilice el orquestador en lugar de los datos fijos actuales.
+
+### 4. Restricciones
+
+- No modifiques los modelos canónicos.
+- No dupliques lógica de proveedores ni de mapeo.
+- No implementes todavía reintentos, circuit breaker ni caché.
+- No modifiques el frontend.
+- No ejecutes comandos Git.
+
+### 5. Validación
+
+- Comprueba que CORE y PAGOS se ejecutan en paralelo.
+- Verifica que el endpoint devuelve datos reales de ambos proveedores.
+- Comprueba que la respuesta cumple el modelo `Dashboard`.
+- Ejecuta las pruebas existentes.
+
+Informa los archivos modificados y los resultados. No avances a la siguiente fase.
+
+############################################################
+
+Implementa exclusivamente la Fase 7 de PayLinkHub.
+
+### 1. Timeouts
+En `app/services/providers.py`:
+- Configura timeouts explícitos e independientes para CORE y PAGOS.
+- Permite configurar sus valores mediante variables de entorno.
+
+### 2. Reintentos
+Utiliza Tenacity para implementar reintentos con backoff exponencial.
+- Reintentar únicamente ante errores HTTP 5xx y timeouts.
+- Nunca reintentar errores HTTP 4xx.
+- Limitar el número de intentos.
+- No ocultar errores después de agotar los reintentos.
+
+### 3. Degradación elegante
+En `app/services/orchestrator.py`:
+- Si CORE falla, `customer` debe ser `null`.
+- Si PAGOS falla, `transactions` debe ser una lista vacía.
+- Si cualquiera falla, `partial` debe ser `true`.
+- Registrar el proveedor afectado en `warnings`.
+- Actualizar individualmente el estado del proveedor a `unavailable`.
+- Si ambos funcionan, `partial` debe ser `false` y los estados deben ser `ok`.
+
+### 4. Endpoint
+El endpoint debe continuar respondiendo HTTP 200 cuando uno o ambos proveedores fallen, siempre que sea posible construir una respuesta válida conforme al contrato canónico.
+
+### 5. Restricciones
+- No modificar los modelos canónicos.
+- No implementar circuit breaker ni caché.
+- No modificar el frontend.
+- No reintentar errores 4xx.
+- No ejecutar comandos Git.
+
+### 6. Validación
+- Probar respuestas exitosas.
+- Simular errores 4xx, 5xx y timeouts.
+- Verificar que 4xx no genera reintentos.
+- Verificar que 5xx y timeouts sí generan reintentos.
+- Verificar degradación parcial y HTTP 200.
+- Ejecutar todas las pruebas existentes.
+
+Informa los archivos modificados y los resultados. No avances a la siguiente fase.
+
+
+############################################################################
+
+
+Implementa exclusivamente la Fase 8 de PayLinkHub.
+
+### 1. Proveedor FX
+
+Endpoint:
+`https://api.frankfurter.dev/v1/latest?base=USD&symbols=EUR,GBP`
+
+En `app/services/providers.py`:
+- Implementa una función asíncrona para consultar FX.
+- Utiliza HTTPX y un timeout explícito.
+- Configura la URL mediante variables de entorno.
+
+### 2. Caché TTL
+
+En `app/services/cache.py`:
+- Implementa una caché en memoria.
+- Utiliza un TTL configurable mediante variables de entorno.
+- Evita consultar FX mientras los datos almacenados sigan vigentes.
+- Actualiza la caché cuando expire.
+- Maneja errores del proveedor sin devolver tasas inventadas.
+
+### 3. Integración
+
+- Integra FX en `app/services/orchestrator.py`.
+- Actualiza `providers.fx` según el resultado de la consulta.
+- Si FX falla, conserva los datos disponibles de CORE y PAGOS.
+- Actualiza `partial` y `warnings` cuando corresponda.
+
+### 4. Contrato canónico
+
+Antes de modificarlo, revisa los modelos actuales. No agregues campos arbitrariamente. Si el contrato todavía no contempla las tasas de cambio, propón el cambio mínimo necesario y explícame antes de implementarlo.
+
+### 5. Restricciones
+
+- No implementar circuit breaker.
+- No modificar el frontend.
+- No modificar funcionalidades existentes innecesariamente.
+- No ejecutar comandos Git.
+
+### 6. Validación
+
+- Verificar consulta exitosa a FX.
+- Verificar que la caché evita llamadas repetidas.
+- Verificar expiración del TTL.
+- Verificar degradación cuando FX falla.
+- Ejecutar todas las pruebas existentes.
+
+Informa los archivos modificados y los resultados. No avances a la siguiente fase.
+
+
+
+##############################################################################
+
+
+Implementa la siguiente fase de PayLinkHub. Primero inspecciona la estructura y el código existente. Reutiliza la arquitectura actual y evita reescribir funcionalidades que ya funcionan.
+
+## OBJETIVO
+
+Completar el panel frontend e implementar búsqueda, filtros, actualización automática y logs estructurados.
+
+### 1. Frontend — prioridad P0
+
+Archivos principales:
+- `public/index.html`
+- `public/style.css`
+- `public/app.js`
+
+Requisitos:
+- Consumir el endpoint real `GET /api/v1/dashboard/{customerId}`.
+- Permitir consultar un cliente mediante su ID.
+- Mostrar información del cliente: nombre, email y teléfono.
+- Mostrar las transacciones en una tabla con ID, productos, cantidad y total USD.
+- Mostrar los estados de CORE, PAGOS y FX mediante indicadores visuales:
+  - `ok`: verde.
+  - `degraded`: amarillo.
+  - `unavailable`: rojo.
+- Mostrar claramente si la respuesta es parcial y presentar los warnings.
+- Mostrar las tasas EUR y GBP cuando `exchange_rates` esté disponible.
+- Manejar errores HTTP, respuestas vacías y estados de carga.
+- Mantener el diseño sencillo, profesional y responsive.
+
+### 2. Búsqueda y filtros — prioridad P1
+
+- Incorporar un campo de búsqueda para filtrar transacciones.
+- Permitir buscar por ID y nombre de producto.
+- Actualizar la tabla sin volver a consultar el backend.
+- Mostrar un mensaje cuando no existan resultados.
+
+### 3. Logs estructurados — prioridad P1
+
+Implementar logs en el backend para cada proveedor:
+- Nombre del proveedor.
+- Tiempo de respuesta en milisegundos.
+- Resultado: success, failure o timeout.
+- Código HTTP cuando esté disponible.
+
+Utilizar el módulo `logging` de Python y formato estructurado JSON.
+No registrar contraseñas, datos sensibles ni información personal innecesaria.
+
+### 4. Auto-refresh — prioridad P2
+
+- Actualizar automáticamente el dashboard cada 30 segundos.
+- Permitir activar y desactivar esta funcionalidad.
+- Evitar solicitudes simultáneas si una consulta anterior todavía está en curso.
+- Mantener el ID del cliente seleccionado.
+
+### RESTRICCIONES
+
+- No modificar el contrato canónico existente.
+- No modificar innecesariamente CORE, PAGOS ni FX.
+- No introducir React, Node.js ni nuevas dependencias frontend.
+- Mantener HTML, CSS y JavaScript vanilla.
+- No introducir datos ficticios para simular resultados.
+- No implementar circuit breaker.
+
+### VALIDACIÓN
+
+Al terminar:
+
+1. Ejecutar `pytest tests -q`.
+2. Corregir cualquier prueba que falle.
+3. Iniciar la aplicación y comprobar que el frontend carga correctamente.
+4. Verificar que el panel consume el endpoint real.
+5. Comprobar los estados de proveedores y las tasas FX.
+6. Verificar búsqueda, filtros y auto-refresh.
+7. Mostrar los archivos modificados y los resultados exactos de las pruebas.
+
+No continúes con documentación adicional ni funcionalidades fuera de este alcance.
