@@ -21,9 +21,7 @@ const providersNode = document.querySelector("#providers");
 const ratesNode = document.querySelector("#rates");
 const customerNode = document.querySelector("#customer");
 const transactionRows = document.querySelector("#transaction-rows");
-const transactionFilter = document.querySelector("#transaction-filter");
 const noTransactions = document.querySelector("#no-transactions");
-const emptyResults = document.querySelector("#empty-results");
 
 let selectedCustomerId = "";
 let requestInFlight = false;
@@ -38,10 +36,6 @@ form.addEventListener("submit", (event) => {
     return;
   }
   loadDashboard(customerId, { refresh: false });
-});
-
-transactionFilter.addEventListener("input", () => {
-  renderTransactions(transactions, transactionFilter.value);
 });
 
 autoRefreshInput.addEventListener("change", () => {
@@ -96,11 +90,7 @@ async function loadDashboard(customerId, { refresh }) {
       throw new Error("El servicio devolvió una respuesta no válida.");
     }
 
-    const customerChanged = customerId !== selectedCustomerId;
     selectedCustomerId = customerId;
-    if (!refresh || customerChanged) {
-      transactionFilter.value = "";
-    }
     renderDashboard(payload);
     showStatus("Dashboard actualizado.", false);
   } catch (error) {
@@ -124,7 +114,7 @@ function renderDashboard(payload) {
   renderCustomer(payload.customer);
   renderPartial(payload.partial, payload.warnings);
   transactions = Array.isArray(payload.transactions) ? payload.transactions : [];
-  renderTransactions(transactions, transactionFilter.value);
+  renderTransactions(transactions);
 }
 
 function renderProviders(providers) {
@@ -179,14 +169,9 @@ function renderPartial(partial, warnings) {
   partialAlert.innerHTML = `<h2>Respuesta parcial</h2>${items ? `<ul>${items}</ul>` : ""}`;
 }
 
-function renderTransactions(items, query) {
-  const normalized = query.trim().toLowerCase();
-  const visible = items.filter((transaction) => matchesTransaction(transaction, normalized));
-  const hasTransactions = items.length > 0;
-
-  noTransactions.hidden = hasTransactions;
-  emptyResults.hidden = !hasTransactions || visible.length > 0;
-  transactionRows.innerHTML = visible.map((transaction) => {
+function renderTransactions(items) {
+  noTransactions.hidden = items.length > 0;
+  transactionRows.innerHTML = items.map((transaction) => {
     const products = Array.isArray(transaction.products) ? transaction.products : [];
     const productCount = products.length;
     const productLabel = productCount === 1 ? "1 producto" : `${productCount} productos`;
@@ -201,15 +186,6 @@ function renderTransactions(items, query) {
       </p>
     </article>`;
   }).join("");
-}
-
-function matchesTransaction(transaction, query) {
-  if (!query) {
-    return true;
-  }
-  const id = String(transaction.id || "").toLowerCase();
-  const products = Array.isArray(transaction.products) ? transaction.products : [];
-  return id.includes(query) || products.some((product) => String(product).toLowerCase().includes(query));
 }
 
 function clearDashboard() {
